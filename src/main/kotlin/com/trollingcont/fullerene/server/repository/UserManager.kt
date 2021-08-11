@@ -20,7 +20,9 @@ class UserManager(db: Database) : BufferedIO {
         USERNAME_INVALID_CHARS(3),
         PASSWORD_EMPTY(4),
         PASSWORD_TOO_SHORT(5),
-        PASSWORD_INVALID_CHARS(6)
+        PASSWORD_INVALID_CHARS(6),
+        USERNAME_TOO_LONG(7),
+        PASSWORD_TOO_LONG(8)
     }
 
     fun addUser(user: User) {
@@ -46,9 +48,11 @@ class UserManager(db: Database) : BufferedIO {
             when {
                 user.name.isEmpty() -> UserDataFormatErrors.USERNAME_EMPTY
                 user.name.length < 3 -> UserDataFormatErrors.USERNAME_TOO_SHORT
+                user.name.length > 32 -> UserDataFormatErrors.USERNAME_TOO_LONG
                 user.name.indexOf(" ") != -1 -> UserDataFormatErrors.USERNAME_INVALID_CHARS
                 user.name.isEmpty() -> UserDataFormatErrors.PASSWORD_EMPTY
                 user.password.length < 6 -> UserDataFormatErrors.PASSWORD_TOO_SHORT
+                user.password.length < 32 -> UserDataFormatErrors.PASSWORD_TOO_LONG
                 user.password.indexOf(" ") != -1 -> UserDataFormatErrors.PASSWORD_INVALID_CHARS
                 else -> UserDataFormatErrors.NO_ERROR
             }
