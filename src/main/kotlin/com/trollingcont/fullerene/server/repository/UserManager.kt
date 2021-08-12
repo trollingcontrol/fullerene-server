@@ -46,15 +46,15 @@ class UserManager(
             throw UserFormatException(errorCode)
         }
 
+        if (isUsernameUsed(user.name)) {
+            throw UserAlreadyExistsException()
+        }
+
         val passwordSalt = generateRandomString(32)
         var newUserPasswordHash = user.password + passwordSalt
 
         for (i in 1.. hashingCount) {
             newUserPasswordHash = generateStringHash(newUserPasswordHash)
-        }
-
-        if (writeBuffer[user.name] != null) {
-            throw UserAlreadyExistsException()
         }
 
         writeBuffer[user.name] = UserMap(newUserPasswordHash, passwordSalt)

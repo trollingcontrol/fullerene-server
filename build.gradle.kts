@@ -26,6 +26,8 @@ dependencies {
     implementation("org.http4k:http4k-format-gson:${http4kVersion}")
     implementation("org.http4k:http4k-security-oauth:${http4kVersion}")
 
+    implementation("mysql:mysql-connector-java:5.1.48")
+
     implementation("org.apache.logging.log4j:log4j:2.14.1")
     implementation("org.slf4j:slf4j-api:1.7.5")
     implementation("org.slf4j:slf4j-log4j12:1.7.5")
