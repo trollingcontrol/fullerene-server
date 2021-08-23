@@ -10,8 +10,7 @@ import com.trollingcont.fullerene.server.model.RegisteredUser
 import com.trollingcont.fullerene.server.model.User
 import com.trollingcont.fullerene.server.model.UserMap
 import com.trollingcont.fullerene.server.model.Users
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -19,13 +18,15 @@ import java.util.*
 import kotlin.collections.HashMap
 
 class UserManager(
-    private val db: Database? = null,
+    private val db: Database,
     private val hs256secret: String,
     private val jwtIssuer: String
     ) : BufferedIO {
 
+    private val dbDriver = UserDatabaseDriver(db)
+    private var nextId = dbDriver.getNextAutoIncrement()
     private val writeBuffer = HashMap<String, UserMap>()
-    private val readBuffer = HashMap<String, UserMap>()
+    private val readBuffer = dbDriver.getUsersList()
 
     enum class UserDataFormatErrors(val errorCode: Int) {
         NO_ERROR(0),
@@ -53,11 +54,13 @@ class UserManager(
         val passwordSalt = generateRandomString(32)
         var newUserPasswordHash = user.password + passwordSalt
 
-        for (i in 1.. hashingCount) {
+        for (i in 1..HASHING_COUNT) {
             newUserPasswordHash = generateStringHash(newUserPasswordHash)
         }
 
-        writeBuffer[user.name] = UserMap(newUserPasswordHash, passwordSalt)
+        writeBuffer[user.name] = UserMap(nextId, newUserPasswordHash, passwordSalt)
+
+        nextId++
     }
 
     fun generateToken(user: User): String {
@@ -67,45 +70,37 @@ class UserManager(
             throw UserFormatException(errorCode)
         }
 
-        val userMap = writeBuffer[user.name] ?: readBuffer[user.name]
+        var userMap = writeBuffer[user.name] ?: readBuffer[user.name]
 
-        val registeredUser = if (userMap != null) {
-            RegisteredUser(user.name, userMap.passwordHash, userMap.salt)
-        }
-        else {
-            // TODO: Get RegisteredUser instance from database
-            null
+        if (userMap == null) {
+            val registeredUser = dbDriver.getUserByName(user.name)
+            userMap = UserMap(registeredUser.id, registeredUser.passwordHash, registeredUser.salt)
         }
 
-        if (registeredUser != null) {
-            var calculatedPasswordHash = user.password + registeredUser.salt
+        var calculatedPasswordHash = user.password + userMap.salt
 
-            for (i in 1.. hashingCount) {
-                calculatedPasswordHash = generateStringHash(calculatedPasswordHash)
-            }
-
-            if (registeredUser.passwordHash != calculatedPasswordHash) {
-                throw UserNotFoundException()
-            }
-
-            val algorithm = Algorithm.HMAC256(hs256secret)
-
-            val calendar = Calendar.getInstance()
-            val currentTime = calendar.time
-            calendar.add(Calendar.HOUR, 48)
-            val expirationTime = calendar.time
-
-            return JWT.create()
-                .withIssuer(jwtIssuer)
-                .withIssuedAt(currentTime)
-                .withExpiresAt(expirationTime)
-                .withSubject(registeredUser.name)
-                .withJWTId(generateRandomString(16))
-                .sign(algorithm)
+        for (i in 1..HASHING_COUNT) {
+            calculatedPasswordHash = generateStringHash(calculatedPasswordHash)
         }
-        else {
+
+        if (userMap.passwordHash != calculatedPasswordHash) {
             throw UserNotFoundException()
         }
+
+        val algorithm = Algorithm.HMAC256(hs256secret)
+
+        val calendar = Calendar.getInstance()
+        val currentTime = calendar.time
+        calendar.add(Calendar.HOUR, 48)
+        val expirationTime = calendar.time
+
+        return JWT.create()
+            .withIssuer(jwtIssuer)
+            .withIssuedAt(currentTime)
+            .withExpiresAt(expirationTime)
+            .withSubject(user.name)
+            .withJWTId(generateRandomString(16))
+            .sign(algorithm)
     }
 
     fun isValidToken(token: String, checkedUsername: String? = null) =
@@ -124,16 +119,15 @@ class UserManager(
         }
 
     fun isUsernameUsed(username: String): Boolean {
-        val usernameInBuffers = writeBuffer.containsKey(username) || readBuffer.containsKey(username)
-
-        if (!usernameInBuffers) {
-            //TODO: Get username from database
-            return false
-        }
-        return true
+        return writeBuffer.containsKey(username) || readBuffer.containsKey(username)
     }
 
-    override fun flushInputBuffer() {}
+    override fun flushInputBuffer() {
+        dbDriver.addUsers(writeBuffer)
+
+        readBuffer.putAll(writeBuffer)
+        writeBuffer.clear()
+    }
 
     companion object {
         fun validateUserData(user: User): UserDataFormatErrors =
@@ -151,7 +145,7 @@ class UserManager(
 
         private const val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         private const val charsLength = chars.length
-        private const val hashingCount = 16
+        private const val HASHING_COUNT = 32
 
         fun generateRandomString(length: Int): String {
             val secureRandom = SecureRandom()

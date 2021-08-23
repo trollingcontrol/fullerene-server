@@ -61,6 +61,4 @@ fun main() {
         println("Unable to start server: Can not connect to database: $exc")
         exitProcess(-1)
     }
-
-    println("Success")
 }

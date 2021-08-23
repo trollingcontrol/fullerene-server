@@ -1,11 +1,9 @@
 package com.trollingcont.fullerene.server.model
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.dao.id.IntIdTable
 
-object Users : Table() {
-    val id = integer("id").autoIncrement()
+object Users : IntIdTable() {
     val name = text("name").uniqueIndex()
     val passwordHash = text("passwordHash")
     val salt = text("salt")
-    override val primaryKey = PrimaryKey(id)
 }
