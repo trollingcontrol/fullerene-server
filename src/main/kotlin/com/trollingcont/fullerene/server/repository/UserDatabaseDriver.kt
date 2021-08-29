@@ -15,6 +15,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 class UserDatabaseDriver(
     private val db: Database
 ) {
+
     init {
         transaction(db) {
             SchemaUtils.create(Users)
