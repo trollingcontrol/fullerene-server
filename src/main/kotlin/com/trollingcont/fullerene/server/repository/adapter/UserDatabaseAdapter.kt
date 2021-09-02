@@ -1,18 +1,16 @@
-package com.trollingcont.fullerene.server.repository
+package com.trollingcont.fullerene.server.repository.adapter
 
 import com.trollingcont.fullerene.server.errorhandling.UserNotFoundException
 import com.trollingcont.fullerene.server.model.RegisteredUser
 import com.trollingcont.fullerene.server.model.UserBody
 import com.trollingcont.fullerene.server.model.UserMap
 import com.trollingcont.fullerene.server.model.Users
-import org.jetbrains.exposed.dao.id.EntityID
+import com.trollingcont.fullerene.server.repository.BatchInsertUpdateOnDuplicate
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.statements.BatchInsertStatement
-import org.jetbrains.exposed.sql.statements.BatchUpdateStatement
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 
-class UserDatabaseDriver(
+class UserDatabaseAdapter(
     private val db: Database
 ) {
 
@@ -22,28 +20,13 @@ class UserDatabaseDriver(
         }
     }
 
-    fun getNextAutoIncrement(): Int {
-        var autoIncrementId = -1
-
-        transaction(db) {
-            exec("SELECT AUTO_INCREMENT FROM information_schema.TABLES " +
-                    "WHERE TABLE_SCHEMA = \"${db.name}\" AND TABLE_NAME = \"${Users.tableName}\"") { rs ->
-                rs.first()
-                autoIncrementId = rs.getInt("AUTO_INCREMENT")
-            }
-        }
-
-        return autoIncrementId
-    }
-
     fun addUsers(usersList: HashMap<String, UserMap>) {
         val list = usersList.map {
-            RegisteredUser(it.value.id, it.key, it.value.passwordHash, it.value.salt)
+            RegisteredUser(it.key, it.value.passwordHash, it.value.salt)
         }
 
         transaction(db) {
             Users.batchInsertOnDuplicateKeyUpdate(list, listOf(Users.passwordHash, Users.salt)) { batch, newUser ->
-                batch[id] = newUser.id
                 batch[name] = newUser.name
                 batch[passwordHash] = newUser.passwordHash
                 batch[salt] = newUser.salt
@@ -77,7 +60,7 @@ class UserDatabaseDriver(
             Users.selectAll().associateByTo(
                 usersMap,
                 { it[Users.name] },
-                { UserMap(it[Users.id].value, it[Users.passwordHash], it[Users.salt]) }
+                { UserMap(it[Users.passwordHash], it[Users.salt]) }
             )
         }
 
@@ -91,7 +74,6 @@ class UserDatabaseDriver(
 
         return query.map {
             RegisteredUser(
-                it[Users.id].value,
                 it[Users.name],
                 it[Users.passwordHash],
                 it[Users.salt]

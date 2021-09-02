@@ -1,4 +1,4 @@
-package com.trollingcont.fullerene.server.repository
+package com.trollingcont.fullerene.server.repository.adapter
 
 import com.trollingcont.fullerene.server.model.ChatData
 import com.trollingcont.fullerene.server.model.ChatParticipants
@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 
-class ChatDatabaseDriver(
+class ChatDatabaseAdapter(
     private val db: Database
 ) {
     companion object {
@@ -16,8 +16,8 @@ class ChatDatabaseDriver(
 
     init {
         transaction(db) {
-            SchemaUtils.create(ChatParticipants)
             SchemaUtils.create(ChatData)
+            SchemaUtils.create(ChatParticipants)
         }
     }
 
@@ -35,10 +35,11 @@ class ChatDatabaseDriver(
         return autoIncrementId
     }
 
-    fun createChat(updateTime: LocalDateTime): Int =
+    fun createChat(creator: String, updateTime: LocalDateTime): Int =
         transaction(db) {
             ChatData.insert {
                 it[ChatData.timeUpdated] = updateTime
+                it[ChatData.creator] = creator
             }[ChatData.id].value
         }
 
@@ -116,7 +117,7 @@ class ChatDatabaseDriver(
         }
     }
 
-    fun removeChatParticipant(chatId: Int, username: String): Int =
+    fun deleteChatParticipant(chatId: Int, username: String): Int =
         transaction(db) {
             ChatParticipants.deleteWhere {
                 (ChatParticipants.chatId eq chatId) and

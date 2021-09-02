@@ -1,4 +1,4 @@
-package com.trollingcont.fullerene.server.repository
+package com.trollingcont.fullerene.server.repository.manager
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
@@ -6,12 +6,11 @@ import com.auth0.jwt.exceptions.JWTVerificationException
 import com.trollingcont.fullerene.server.errorhandling.UserAlreadyExistsException
 import com.trollingcont.fullerene.server.errorhandling.UserFormatException
 import com.trollingcont.fullerene.server.errorhandling.UserNotFoundException
-import com.trollingcont.fullerene.server.model.RegisteredUser
 import com.trollingcont.fullerene.server.model.User
 import com.trollingcont.fullerene.server.model.UserMap
-import com.trollingcont.fullerene.server.model.Users
+import com.trollingcont.fullerene.server.repository.BufferedIO
+import com.trollingcont.fullerene.server.repository.adapter.UserDatabaseAdapter
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
@@ -23,8 +22,7 @@ class UserManager(
     private val jwtIssuer: String
     ) : BufferedIO {
 
-    private val dbDriver = UserDatabaseDriver(db)
-    private var nextId = dbDriver.getNextAutoIncrement()
+    private val dbDriver = UserDatabaseAdapter(db)
     private val writeBuffer = HashMap<String, UserMap>()
     private val readBuffer = dbDriver.getUsersList()
 
@@ -58,9 +56,7 @@ class UserManager(
             newUserPasswordHash = generateStringHash(newUserPasswordHash)
         }
 
-        writeBuffer[user.name] = UserMap(nextId, newUserPasswordHash, passwordSalt)
-
-        nextId++
+        writeBuffer[user.name] = UserMap(newUserPasswordHash, passwordSalt)
     }
 
     fun generateToken(user: User): String {
@@ -74,7 +70,7 @@ class UserManager(
 
         if (userMap == null) {
             val registeredUser = dbDriver.getUserByName(user.name)
-            userMap = UserMap(registeredUser.id, registeredUser.passwordHash, registeredUser.salt)
+            userMap = UserMap(registeredUser.passwordHash, registeredUser.salt)
         }
 
         var calculatedPasswordHash = user.password + userMap.salt

@@ -1,4 +1,4 @@
-package com.trollingcont.fullerene.server.repository
+package com.trollingcont.fullerene.server.repository.adapter
 
 import com.trollingcont.fullerene.server.errorhandling.MessageNotFoundException
 import com.trollingcont.fullerene.server.model.Messages
@@ -7,7 +7,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 
-class MessageDatabaseDriver(
+class MessageDatabaseAdapter(
     private val db: Database
     ) {
 
@@ -39,7 +39,7 @@ class MessageDatabaseDriver(
     fun addMessage(chatId: Int, creatorUsername: String, content: String): PostedMessage =
         transaction(db) {
             val result = Messages.insert {
-                it[Messages.time] = LocalDateTime.now()
+                it[Messages.timePosted] = LocalDateTime.now()
                 it[Messages.sourceUser] = creatorUsername
                 it[Messages.chatId] = chatId
                 it[Messages.content] = content
@@ -47,7 +47,7 @@ class MessageDatabaseDriver(
 
             PostedMessage(
                 result[Messages.id].value,
-                result[Messages.time],
+                result[Messages.timePosted],
                 result[Messages.sourceUser],
                 result[Messages.chatId],
                 result[Messages.content],
@@ -68,7 +68,7 @@ class MessageDatabaseDriver(
             result.map {
                 PostedMessage(
                     it[Messages.id].value,
-                    it[Messages.time],
+                    it[Messages.timePosted],
                     it[Messages.sourceUser],
                     it[Messages.chatId],
                     it[Messages.content],
@@ -111,7 +111,7 @@ class MessageDatabaseDriver(
             }.map {
                 PostedMessage(
                     it[Messages.id].value,
-                    it[Messages.time],
+                    it[Messages.timePosted],
                     it[Messages.sourceUser],
                     it[Messages.chatId],
                     it[Messages.content],
