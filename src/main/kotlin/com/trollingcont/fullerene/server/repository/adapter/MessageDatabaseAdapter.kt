@@ -58,7 +58,7 @@ class MessageDatabaseAdapter(
             )
         }
 
-    fun getMessageById(messageId: Int): PostedMessage =
+    fun getMessageById(messageId: Int): PostedMessageBody =
         transaction(db) {
             val result = Messages.select {
                 Messages.id eq messageId
@@ -69,15 +69,12 @@ class MessageDatabaseAdapter(
             }
 
             result.map {
-                PostedMessage(
-                    it[Messages.id].value,
-                    PostedMessageBody(
-                        it[Messages.timePosted],
-                        it[Messages.sourceUser],
-                        it[Messages.chatId],
-                        it[Messages.content],
-                        it[Messages.isRead]
-                    )
+                PostedMessageBody(
+                    it[Messages.timePosted],
+                    it[Messages.sourceUser],
+                    it[Messages.chatId],
+                    it[Messages.content],
+                    it[Messages.isRead]
                 )
             }[0]
         }
