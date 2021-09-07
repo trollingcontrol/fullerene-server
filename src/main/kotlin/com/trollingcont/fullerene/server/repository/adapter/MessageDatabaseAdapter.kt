@@ -3,6 +3,7 @@ package com.trollingcont.fullerene.server.repository.adapter
 import com.trollingcont.fullerene.server.errorhandling.MessageNotFoundException
 import com.trollingcont.fullerene.server.model.Messages
 import com.trollingcont.fullerene.server.model.PostedMessage
+import com.trollingcont.fullerene.server.model.PostedMessageBody
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
@@ -47,11 +48,13 @@ class MessageDatabaseAdapter(
 
             PostedMessage(
                 result[Messages.id].value,
-                result[Messages.timePosted],
-                result[Messages.sourceUser],
-                result[Messages.chatId],
-                result[Messages.content],
-                result[Messages.isRead]
+                PostedMessageBody(
+                    result[Messages.timePosted],
+                    result[Messages.sourceUser],
+                    result[Messages.chatId],
+                    result[Messages.content],
+                    result[Messages.isRead]
+                )
             )
         }
 
@@ -68,11 +71,13 @@ class MessageDatabaseAdapter(
             result.map {
                 PostedMessage(
                     it[Messages.id].value,
-                    it[Messages.timePosted],
-                    it[Messages.sourceUser],
-                    it[Messages.chatId],
-                    it[Messages.content],
-                    it[Messages.isRead]
+                    PostedMessageBody(
+                        it[Messages.timePosted],
+                        it[Messages.sourceUser],
+                        it[Messages.chatId],
+                        it[Messages.content],
+                        it[Messages.isRead]
+                    )
                 )
             }[0]
         }
@@ -111,11 +116,13 @@ class MessageDatabaseAdapter(
             }.map {
                 PostedMessage(
                     it[Messages.id].value,
-                    it[Messages.timePosted],
-                    it[Messages.sourceUser],
-                    it[Messages.chatId],
-                    it[Messages.content],
-                    it[Messages.isRead]
+                    PostedMessageBody(
+                        it[Messages.timePosted],
+                        it[Messages.sourceUser],
+                        it[Messages.chatId],
+                        it[Messages.content],
+                        it[Messages.isRead]
+                    )
                 )
             }
         }
