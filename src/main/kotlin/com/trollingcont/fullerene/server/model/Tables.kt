@@ -20,6 +20,7 @@ object Messages : IntIdTable() {
     val timePosted = datetime("timePosted")
     val sourceUser = varchar("name", 64)
     val chatId = integer("chatId")
+    val chatIndex = integer("chatIndex")
     val content = text("content")
     val isRead = bool("isRead").default(false)
 }

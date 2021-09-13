@@ -37,17 +37,19 @@ class MessageDatabaseAdapter(
         return autoIncrementId
     }
 
-    fun addMessage(chatId: Int, creatorUsername: String, content: String): PostedMessage =
+    fun addMessage(chatId: Int, chatIndex: Int, creatorUsername: String, content: String): PostedMessage =
         transaction(db) {
             val result = Messages.insert {
                 it[Messages.timePosted] = LocalDateTime.now()
                 it[Messages.sourceUser] = creatorUsername
                 it[Messages.chatId] = chatId
                 it[Messages.content] = content
+                it[Messages.chatIndex] = chatIndex
             }
 
             PostedMessage(
                 result[Messages.id].value,
+                result[Messages.chatIndex],
                 PostedMessageBody(
                     result[Messages.timePosted],
                     result[Messages.sourceUser],
@@ -62,6 +64,28 @@ class MessageDatabaseAdapter(
         transaction(db) {
             val result = Messages.select {
                 Messages.id eq messageId
+            }
+
+            if (result.count() == 0L) {
+                throw MessageNotFoundException()
+            }
+
+            result.map {
+                PostedMessageBody(
+                    it[Messages.timePosted],
+                    it[Messages.sourceUser],
+                    it[Messages.chatId],
+                    it[Messages.content],
+                    it[Messages.isRead]
+                )
+            }[0]
+        }
+
+    fun getMessageByChatIndex(chatId: Int, chatIndex: Int): PostedMessageBody =
+        transaction(db) {
+            val result = Messages.select {
+                (Messages.chatId eq chatId) and
+                        (Messages.chatIndex eq chatIndex)
             }
 
             if (result.count() == 0L) {
@@ -113,6 +137,7 @@ class MessageDatabaseAdapter(
             }.map {
                 PostedMessage(
                     it[Messages.id].value,
+                    it[Messages.chatIndex],
                     PostedMessageBody(
                         it[Messages.timePosted],
                         it[Messages.sourceUser],

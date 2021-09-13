@@ -1,8 +1,7 @@
 package com.trollingcont.fullerene.server.model
 
-import java.time.LocalDateTime
-
 data class PostedMessage(
     val id: Int,
+    val chatIndex: Int,
     val body: PostedMessageBody
 )
