@@ -23,21 +23,21 @@ class MessageDatabaseAdapter(
         }
     }
 
-    fun getNextMessageId(): Int {
-        var autoIncrementId = -1
+    fun getNextMessageId(): Long {
+        var autoIncrementId = -1L
 
         transaction(db) {
             exec("SELECT AUTO_INCREMENT FROM information_schema.TABLES " +
                     "WHERE TABLE_SCHEMA = \"${db.name}\" AND TABLE_NAME = \"${Messages.tableName}\"") { rs ->
                 rs.first()
-                autoIncrementId = rs.getInt("AUTO_INCREMENT")
+                autoIncrementId = rs.getLong("AUTO_INCREMENT")
             }
         }
 
         return autoIncrementId
     }
 
-    fun addMessage(chatId: Int, chatIndex: Int, creatorUsername: String, content: String): PostedMessage =
+    fun addMessage(chatId: Long, chatIndex: Long, creatorUsername: String, content: String): PostedMessage =
         transaction(db) {
             val result = Messages.insert {
                 it[Messages.timePosted] = LocalDateTime.now()
@@ -48,19 +48,19 @@ class MessageDatabaseAdapter(
             }
 
             PostedMessage(
-                result[Messages.id].value,
-                result[Messages.chatIndex],
+                result[Messages.id].value.toLong(),
                 PostedMessageBody(
                     result[Messages.timePosted],
                     result[Messages.sourceUser],
                     result[Messages.chatId],
+                    result[Messages.chatIndex],
                     result[Messages.content],
                     result[Messages.isRead]
                 )
             )
         }
 
-    fun getMessageById(messageId: Int): PostedMessageBody =
+    fun getMessageById(messageId: Long): PostedMessageBody =
         transaction(db) {
             val result = Messages.select {
                 Messages.id eq messageId
@@ -75,13 +75,14 @@ class MessageDatabaseAdapter(
                     it[Messages.timePosted],
                     it[Messages.sourceUser],
                     it[Messages.chatId],
+                    it[Messages.chatIndex],
                     it[Messages.content],
                     it[Messages.isRead]
                 )
             }[0]
         }
 
-    fun getMessageByChatIndex(chatId: Int, chatIndex: Int): PostedMessageBody =
+    fun getMessageByChatIndex(chatId: Long, chatIndex: Long): PostedMessageBody =
         transaction(db) {
             val result = Messages.select {
                 (Messages.chatId eq chatId) and
@@ -97,20 +98,21 @@ class MessageDatabaseAdapter(
                     it[Messages.timePosted],
                     it[Messages.sourceUser],
                     it[Messages.chatId],
+                    it[Messages.chatIndex],
                     it[Messages.content],
                     it[Messages.isRead]
                 )
             }[0]
         }
 
-    fun markMessageAsRead(messageId: Int): Int =
+    fun markMessageAsRead(messageId: Long): Int =
         transaction(db) {
             Messages.update({ Messages.id eq messageId }) {
                 it[Messages.isRead] = true
             }
         }
 
-    fun getChatMessages(chatId: Int, startPoint: Long = SELECT_ALL, count: Int = 1): List<PostedMessage> =
+    fun getChatMessages(chatId: Long, startPoint: Long = SELECT_ALL, count: Long = 1): List<PostedMessage> =
         transaction(db) {
             val query = Messages.select {
                 Messages.chatId eq chatId
@@ -125,23 +127,23 @@ class MessageDatabaseAdapter(
                 SELECT_LAST -> {
                     query
                         .orderBy(Messages.id, SortOrder.DESC)
-                        .limit(count)
+                        .limit(count.toInt())
                         .reversed()
                 }
 
                 else -> {
                     query
                         .orderBy(Messages.id, SortOrder.ASC)
-                        .limit(count, startPoint)
+                        .limit(count.toInt(), startPoint)
                 }
             }.map {
                 PostedMessage(
                     it[Messages.id].value,
-                    it[Messages.chatIndex],
                     PostedMessageBody(
                         it[Messages.timePosted],
                         it[Messages.sourceUser],
                         it[Messages.chatId],
+                        it[Messages.chatIndex],
                         it[Messages.content],
                         it[Messages.isRead]
                     )
@@ -149,7 +151,7 @@ class MessageDatabaseAdapter(
             }
         }
 
-    fun getChatMessagesCount(chatId: Int): Long =
+    fun getChatMessagesCount(chatId: Long): Long =
         transaction(db) {
             Messages.select {
                 Messages.chatId eq chatId
