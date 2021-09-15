@@ -82,7 +82,7 @@ class MessageDatabaseAdapter(
             }[0]
         }
 
-    fun getMessageByChatIndex(chatId: Long, chatIndex: Long): PostedMessageBody =
+    fun getMessageByChatIndex(chatId: Long, chatIndex: Long): PostedMessage =
         transaction(db) {
             val result = Messages.select {
                 (Messages.chatId eq chatId) and
@@ -94,13 +94,16 @@ class MessageDatabaseAdapter(
             }
 
             result.map {
-                PostedMessageBody(
-                    it[Messages.timePosted],
-                    it[Messages.sourceUser],
-                    it[Messages.chatId],
-                    it[Messages.chatIndex],
-                    it[Messages.content],
-                    it[Messages.isRead]
+                PostedMessage(
+                    it[Messages.id].value,
+                    PostedMessageBody(
+                        it[Messages.timePosted],
+                        it[Messages.sourceUser],
+                        it[Messages.chatId],
+                        it[Messages.chatIndex],
+                        it[Messages.content],
+                        it[Messages.isRead]
+                    )
                 )
             }[0]
         }
