@@ -20,7 +20,7 @@ class AclDatabaseAdapter(
     * If username = null then chat default ACL is affected
     * */
 
-    fun addChatAclRight(chatId: Int, rightName: String, state: Boolean, username: String? = null) {
+    fun addChatAclRight(chatId: Long, rightName: String, state: Boolean, username: String? = null) {
         transaction(db) {
             if (username == null) {
                 DefaultChatAcl.insert {
@@ -41,7 +41,7 @@ class AclDatabaseAdapter(
         }
     }
 
-    fun setChatAclRight(chatId: Int, rightName: String, state: Boolean, username: String? = null) {
+    fun setChatAclRight(chatId: Long, rightName: String, state: Boolean, username: String? = null) {
         transaction(db) {
             if (username == null) {
                 DefaultChatAcl.update({
@@ -64,7 +64,7 @@ class AclDatabaseAdapter(
         }
     }
 
-    fun getChatAclRight(chatId: Int, rightName: String, username: String? = null): Boolean? =
+    fun getChatAclRight(chatId: Long, rightName: String, username: String? = null): Boolean? =
         transaction(db) {
             if (username == null) {
                 val query = DefaultChatAcl.select {
@@ -100,7 +100,7 @@ class AclDatabaseAdapter(
             }
         }
 
-    fun deleteChatAclRight(chatId: Int, rightName: String, username: String? = null): Int =
+    fun deleteChatAclRight(chatId: Long, rightName: String, username: String? = null): Int =
         transaction(db) {
             if (username == null) {
                 DefaultChatAcl.deleteWhere {
