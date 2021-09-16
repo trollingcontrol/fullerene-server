@@ -4,7 +4,9 @@ import com.trollingcont.fullerene.server.errorhandling.MessageNotFoundException
 import com.trollingcont.fullerene.server.model.Messages
 import com.trollingcont.fullerene.server.model.PostedMessage
 import com.trollingcont.fullerene.server.model.PostedMessageBody
+import com.trollingcont.fullerene.server.repository.BatchInsertUpdateOnDuplicate
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 
@@ -59,6 +61,18 @@ class MessageDatabaseAdapter(
                 )
             )
         }
+
+    fun addMessagesList(messagesList: List<PostedMessage>) {
+        transaction(db) {
+            Messages.batchInsertOnDuplicateKeyUpdate(
+                messagesList,
+                listOf(Messages.isRead, Messages.content)
+            ) { batch, postedMessage ->
+                batch[isRead] = postedMessage.body.isRead
+                batch[content] = postedMessage.body.content
+            }
+        }
+    }
 
     fun getMessageById(messageId: Long): PostedMessageBody =
         transaction(db) {
@@ -160,4 +174,17 @@ class MessageDatabaseAdapter(
                 Messages.chatId eq chatId
             }.count()
         }
+
+    private fun <T : Table, E> T.batchInsertOnDuplicateKeyUpdate(data: List<E>, onDupUpdateColumns: List<Column<*>>, body: T.(BatchInsertUpdateOnDuplicate, E) -> Unit) {
+        data.
+        takeIf { it.isNotEmpty() }?.
+        let {
+            val insert = BatchInsertUpdateOnDuplicate(this, onDupUpdateColumns)
+            data.forEach {
+                insert.addBatch()
+                body(insert, it)
+            }
+            TransactionManager.current().exec(insert)
+        }
+    }
 }
