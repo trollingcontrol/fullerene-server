@@ -66,10 +66,22 @@ class MessageDatabaseAdapter(
         transaction(db) {
             Messages.batchInsertOnDuplicateKeyUpdate(
                 messagesList,
-                listOf(Messages.isRead, Messages.content)
+                listOf(
+                    Messages.timePosted,
+                    Messages.sourceUser,
+                    Messages.chatId,
+                    Messages.chatIndex,
+                    Messages.content,
+                    Messages.isRead
+                )
             ) { batch, postedMessage ->
-                batch[isRead] = postedMessage.body.isRead
-                batch[content] = postedMessage.body.content
+                batch[Messages.id] = postedMessage.id
+                batch[Messages.timePosted] = postedMessage.body.timePosted
+                batch[Messages.sourceUser] = postedMessage.body.sourceUser
+                batch[Messages.chatId] = postedMessage.body.chatId
+                batch[Messages.chatIndex] = postedMessage.body.chatIndex
+                batch[Messages.content] = postedMessage.body.content
+                batch[Messages.isRead] = postedMessage.body.isRead
             }
         }
     }
