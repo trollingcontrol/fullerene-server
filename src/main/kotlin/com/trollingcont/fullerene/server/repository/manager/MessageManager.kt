@@ -135,13 +135,36 @@ class MessageManager(
         }
 
         val messagesList = mutableListOf<PostedMessage>()
+        val nonCachedRanges = mutableListOf<LongRange>()
+
+        var rangeStart: Long = -1L
 
         for (chatIndex in range) {
-            try {
-                messagesList.add(getMessageByChatIndex(chatId, chatIndex))
+            val bufferedMessage = getBufferedMessageByChatIndex(chatId, chatIndex)
+
+            if (bufferedMessage != null) {
+                messagesList.add(bufferedMessage)
+
+                if (rangeStart != -1L) {
+                    nonCachedRanges.add(rangeStart until chatIndex)
+                    rangeStart = -1L
+                }
             }
-            catch (mnf: MessageNotFoundException) {
-                invalidChatIndexes.add(Pair(chatId, chatIndex))
+            else if (rangeStart == -1L) {
+                rangeStart = chatIndex
+            }
+        }
+
+        if (rangeStart != -1L) {
+            nonCachedRanges.add(rangeStart..range.last)
+        }
+
+        for (nonCachedRange in nonCachedRanges) {
+            val dbMessagesList = dbAdapter.getChatMessagesInRange(chatId, nonCachedRange)
+
+            for (message in dbMessagesList) {
+                messagesList.add(message)
+                addMessageToBuffer(readBuffer, message)
             }
         }
 
@@ -223,6 +246,12 @@ class MessageManager(
         val messageId = chatMessagesList[chatIndex] ?: return null
 
         return PostedMessage(messageId, getBufferedMessageById(messageId)!!)
+    }
+
+    private fun isMessageByChatIndexBuffered(chatId: Long, chatIndex: Long): Boolean {
+        val chatMessagesList = messagesByChats[chatId] ?: return false
+
+        return chatMessagesList[chatIndex] != null
     }
 
     companion object {

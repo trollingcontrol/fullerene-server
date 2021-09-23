@@ -180,6 +180,28 @@ class MessageDatabaseAdapter(
             }
         }
 
+    fun getChatMessagesInRange(chatId: Long, range: LongRange): List<PostedMessage> =
+        transaction(db) {
+            val query = Messages.select {
+                (Messages.chatId eq chatId) and
+                        (Messages.chatIndex).between(range.first, range.last)
+            }
+
+            query.map {
+                PostedMessage(
+                    it[Messages.id].value,
+                    PostedMessageBody(
+                        it[Messages.timePosted],
+                        it[Messages.sourceUser],
+                        it[Messages.chatId],
+                        it[Messages.chatIndex],
+                        it[Messages.content],
+                        it[Messages.isRead]
+                    )
+                )
+            }
+        }
+
     fun getChatMessagesCount(chatId: Long): Long =
         transaction(db) {
             Messages.select {
